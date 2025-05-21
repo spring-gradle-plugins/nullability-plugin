@@ -1,0 +1,7 @@
+plugins {
+	id "io.spring.nullability"
+}
+
+nullability {
+	errorProneVersion = "2.37.0"
+}

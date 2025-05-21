@@ -1,0 +1,19 @@
+pluginManagement {
+	resolutionStrategy {
+		eachPlugin {
+			if (requested.id.id == 'io.spring.javaformat') {
+				useModule "io.spring.javaformat:spring-javaformat-gradle-plugin:${requested.version}"
+			}
+		}
+	}
+	repositories {
+		gradlePluginPortal()
+		mavenCentral()
+	}
+}
+
+plugins {
+	id "io.spring.develocity.conventions" version "0.0.22"
+}
+
+rootProject.name = 'nullability-plugin'

@@ -1,0 +1,98 @@
+plugins {
+	id "checkstyle"
+	id "io.spring.javaformat" version "$springJavaFormatVersion"
+	id "io.spring.nohttp" version "0.0.11"
+	id "java-gradle-plugin"
+	id "maven-publish"
+}
+
+group = "io.spring.gradle.nullability"
+description = "Nullability Plugin"
+
+gradlePlugin {
+	plugins {
+		compatibilityTest {
+			description = project.description
+			displayName = project.description
+			id = "io.spring.nullability"
+			implementationClass = "io.spring.gradle.nullability.NullabilityPlugin"
+		}
+	}
+}
+
+repositories {
+	mavenCentral()
+	gradlePluginPortal()
+}
+
+checkstyle {
+	toolVersion = "10.23.1"
+}
+
+dependencies {
+	api("net.ltgt.gradle:gradle-errorprone-plugin:4.2.0")
+
+	checkstyle("io.spring.javaformat:spring-javaformat-checkstyle:$springJavaFormatVersion")
+	checkstyle("com.puppycrawl.tools:checkstyle:${checkstyle.toolVersion}")
+
+	testImplementation(platform("org.junit:junit-bom:5.12.2"))
+	testImplementation("org.assertj:assertj-core:3.27.2")
+	testImplementation("org.junit.jupiter:junit-jupiter")
+
+	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+java {
+	sourceCompatibility = "17"
+	targetCompatibility = "17"
+	withJavadocJar()
+	withSourcesJar()
+}
+
+test {
+	useJUnitPlatform()
+}
+
+publishing {
+	publications.withType(MavenPublication) {
+		pom {
+			name = project.description
+			description = project.description
+			url = "https://github.com/spring-gradle-plugins/nullability-plugin"
+			organization {
+				name = "Spring IO"
+				url = "https://spring.io"
+			}
+			licenses {
+				license {
+					name = "The Apache Software License, Version 2.0"
+					url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+					distribution = "repo"
+				}
+			}
+			scm {
+				url = "https://github.com/spring-gradle-plugins/nullability-plugin"
+				connection = "scm:git:git://github.com/spring-gradle-plugins/nullability-plugin"
+				developerConnection = "scm:git:git://github.com/spring-gradle-plugins/nullability-plugin"
+			}
+			developers {
+				developer {
+					name = "Spring"
+					email = "ask@spring.io"
+				}
+			}
+			issueManagement {
+				system = "GitHub"
+				url = "https://github.com/spring-gradle-plugins/nullability-plugin"
+			}
+		}
+	}
+	if (project.hasProperty("deploymentRepository")) {
+		repositories {
+			maven {
+				url = "${deploymentRepository}"
+				name = "deployment"
+			}
+		}
+	}
+}
