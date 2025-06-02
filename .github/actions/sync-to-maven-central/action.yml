@@ -40,7 +40,7 @@ runs:
     - name: Await
       shell: bash
       run: |
-        url=${{ format('https://repo.maven.apache.org/maven2/io/spring/gradle/nullability-plugin/{0}/nullability-plugin-{0}.jar', inputs.nullability-plugin-version) }}
+        url=${{ format('https://repo.maven.apache.org/maven2/io/spring/gradle/nullability/nullability-plugin/{0}/nullability-plugin-{0}.jar', inputs.nullability-plugin-version) }}
         echo "Waiting for $url"
         until curl --fail --head --silent $url > /dev/null
         do
