@@ -25,7 +25,7 @@ import org.gradle.api.provider.Property;
  */
 public abstract class NullabilityPluginExtension {
 
-	static final String ERROR_PRONE_VERSION = "2.39.0";
+	static final String ERROR_PRONE_VERSION = "2.40.0";
 
 	static final String NULL_AWAY_VERSION = "0.12.7";
 
