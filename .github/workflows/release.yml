@@ -10,8 +10,8 @@ concurrency:
 jobs:
   build-and-stage-release:
     name: Build and Stage Release
-    runs-on: ubuntu-latest
     if: ${{ github.repository == 'spring-gradle-plugins/nullability-plugin' }}
+    runs-on: ubuntu-latest
     steps:
       - name: Check Out Code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -22,16 +22,16 @@ jobs:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
           publish: true
       - name: Stage Release
-        uses: spring-io/artifactory-deploy-action@26bbe925a75f4f863e1e529e85be2d0093cac116 # v0.0.1
+        uses: spring-io/artifactory-deploy-action@dc1913008c0599f0c4b1fdafb6ff3c502b3565ea # v0.0.2
         with:
-          uri: 'https://repo.spring.io'
-          username: ${{ secrets.ARTIFACTORY_USERNAME }}
-          password: ${{ secrets.ARTIFACTORY_PASSWORD }}
           build-name: ${{ format('nullability-plugin-{0}', steps.build-and-publish.outputs.version)}}
-          repository: 'libs-staging-local'
           folder: 'deployment-repository'
+          password: ${{ secrets.ARTIFACTORY_PASSWORD }}
+          repository: 'libs-staging-local'
           signing-key: ${{ secrets.GPG_PRIVATE_KEY }}
           signing-passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          uri: 'https://repo.spring.io'
+          username: ${{ secrets.ARTIFACTORY_USERNAME }}
     outputs:
       version: ${{ steps.build-and-publish.outputs.version }}
   sync-to-maven-central:
@@ -45,9 +45,9 @@ jobs:
       - name: Sync to Maven Central
         uses: ./.github/actions/sync-to-maven-central
         with:
-          jfrog-cli-config-token: ${{ secrets.JF_ARTIFACTORY_SPRING }}
           central-token-password: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
           central-token-username: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
+          jfrog-cli-config-token: ${{ secrets.JF_ARTIFACTORY_SPRING }}
           nullability-plugin-version: ${{ needs.build-and-stage-release.outputs.version }}
   promote-release:
     name: Promote Release

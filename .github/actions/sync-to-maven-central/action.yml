@@ -1,5 +1,5 @@
 name: Sync to Maven Central
-description: Syncs a release to Maven Central and waits for it to be available for use
+description: 'Syncs a release to Maven Central and waits for it to be available for use'
 inputs:
   central-token-password:
     description: 'Password for authentication with central.sonatype.com'
@@ -11,7 +11,7 @@ inputs:
     description: 'Config token for the JFrog CLI'
     required: true
   nullability-plugin-version:
-    description: 'The version of Compatibility Test Plugin that is being synced to Central'
+    description: 'Version of Nullability Plugin that is being synced to Central'
     required: true
 runs:
   using: composite
@@ -29,13 +29,6 @@ runs:
         token: ${{ inputs.central-token-password }}
         token-name: ${{ inputs.central-token-username }}
     - name: Await
-      shell: bash
-      run: |
-        url=${{ format('https://repo.maven.apache.org/maven2/io/spring/gradle/nullability/nullability-plugin/{0}/nullability-plugin-{0}.jar', inputs.nullability-plugin-version) }}
-        echo "Waiting for $url"
-        until curl --fail --head --silent $url > /dev/null
-        do
-          echo "."
-          sleep 60
-        done
-        echo "$url is available"
+      uses: ./.github/actions/await-http-resource
+      with:
+        url: {{ format('https://repo.maven.apache.org/maven2/io/spring/gradle/nullability/nullability-plugin/{0}/nullability-plugin-{0}.jar', inputs.nullability-plugin-version) }}
