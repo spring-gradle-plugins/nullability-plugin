@@ -31,4 +31,4 @@ runs:
     - name: Await
       uses: ./.github/actions/await-http-resource
       with:
-        url: {{ format('https://repo.maven.apache.org/maven2/io/spring/gradle/nullability/nullability-plugin/{0}/nullability-plugin-{0}.jar', inputs.nullability-plugin-version) }}
+        url: ${{ format('https://repo.maven.apache.org/maven2/io/spring/gradle/nullability/nullability-plugin/{0}/nullability-plugin-{0}.jar', inputs.nullability-plugin-version) }}
