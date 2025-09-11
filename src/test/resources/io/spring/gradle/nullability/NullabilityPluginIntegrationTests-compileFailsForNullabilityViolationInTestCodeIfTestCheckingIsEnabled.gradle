@@ -1,0 +1,24 @@
+plugins {
+    id "io.spring.nullability"
+    id "java"
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly("org.jspecify:jspecify:1.0.0")
+
+    testCompileOnly("org.jspecify:jspecify:1.0.0")
+}
+
+nullability {
+    check {
+        sourceSet {
+            "test" {
+                type = "test"
+            }
+        }
+    }
+}

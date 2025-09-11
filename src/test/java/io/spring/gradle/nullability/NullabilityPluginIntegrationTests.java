@@ -35,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Integration tests for {@link NullabilityPlugin}.
  *
  * @author Andy Wilkinson
+ * @author Moritz Halbritter
  */
 @ExtendWith(GradleBuildExtension.class)
 class NullabilityPluginIntegrationTests {
@@ -68,7 +69,7 @@ class NullabilityPluginIntegrationTests {
 	void configuresErrorProneOnCompileJava() {
 		BuildResult result = this.gradleBuild.build("checkCompileJava");
 		assertThat(result.getOutput())
-			.contains("-XepDisableAllChecks -Xep:NullAway:ERROR -XepOpt:NullAway:OnlyNullMarked=true "
+			.contains("-XepDisableAllChecks " + "-Xep:NullAway:ERROR " + "-XepOpt:NullAway:OnlyNullMarked=true "
 					+ "-XepOpt:NullAway:CustomContractAnnotations=org.springframework.lang.Contract "
 					+ "-XepOpt:NullAway:JSpecifyMode=true");
 	}
@@ -80,9 +81,31 @@ class NullabilityPluginIntegrationTests {
 	}
 
 	@Test
+	void configuresErrorProneOnCompileJavaIfTestCheckingIsEnabled() {
+		BuildResult testResult = this.gradleBuild.build("checkCompileTestJava");
+		assertThat(testResult.getOutput()).contains("-XepDisableAllChecks " + "-XepCompilingTestOnlyCode "
+				+ "-Xep:NullAway:ERROR " + "-XepOpt:NullAway:HandleTestAssertionLibraries=true "
+				+ "-XepOpt:NullAway:OnlyNullMarked=true "
+				+ "-XepOpt:NullAway:CustomContractAnnotations=org.springframework.lang.Contract,org.assertj.core.internal.annotation.Contract "
+				+ "-XepOpt:NullAway:JSpecifyMode=true");
+		BuildResult result = this.gradleBuild.build("checkCompileJava");
+		assertThat(result.getOutput())
+			.contains("-XepDisableAllChecks " + "-Xep:NullAway:ERROR " + "-XepOpt:NullAway:OnlyNullMarked=true "
+					+ "-XepOpt:NullAway:CustomContractAnnotations=org.springframework.lang.Contract "
+					+ "-XepOpt:NullAway:JSpecifyMode=true");
+	}
+
+	@Test
 	void compileFailsForNullabilityViolationInMainCode() throws IOException {
 		writeSource("main");
 		BuildResult result = this.gradleBuild.prepareRunner("compileJava").buildAndFail();
+		assertThat(result.getOutput()).contains("[NullAway] assigning @Nullable expression to @NonNull field");
+	}
+
+	@Test
+	void compileFailsForNullabilityViolationInAdditionalSourceSet() throws IOException {
+		writeSource("additional");
+		BuildResult result = this.gradleBuild.prepareRunner("compileAdditionalJava").buildAndFail();
 		assertThat(result.getOutput()).contains("[NullAway] assigning @Nullable expression to @NonNull field");
 	}
 
@@ -91,6 +114,13 @@ class NullabilityPluginIntegrationTests {
 		writeSource("test");
 		BuildResult result = this.gradleBuild.build("compileTestJava");
 		assertThat(result.task(":compileTestJava").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+	}
+
+	@Test
+	void compileFailsForNullabilityViolationInTestCodeIfTestCheckingIsEnabled() throws IOException {
+		writeSource("test");
+		BuildResult result = this.gradleBuild.prepareRunner("compileTestJava").buildAndFail();
+		assertThat(result.getOutput()).contains("[NullAway] assigning @Nullable expression to @NonNull field");
 	}
 
 	private void writeSource(String sourceSetName) {

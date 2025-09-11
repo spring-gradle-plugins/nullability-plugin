@@ -16,14 +16,24 @@
 
 package io.spring.gradle.nullability;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.StringJoiner;
+import java.util.TreeSet;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import net.ltgt.gradle.errorprone.CheckSeverity;
 import net.ltgt.gradle.errorprone.ErrorProneOptions;
 import net.ltgt.gradle.errorprone.ErrorPronePlugin;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.plugins.ExtensionAware;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.compile.CompileOptions;
 import org.gradle.api.tasks.compile.JavaCompile;
 
@@ -32,10 +42,16 @@ import org.gradle.api.tasks.compile.JavaCompile;
  *
  * @author Brian Clozel
  * @author Andy Wilkinson
+ * @author Moritz Halbritter
  */
 public class NullabilityPlugin implements Plugin<Project> {
 
-	private static final Pattern COMPILE_MAIN_SOURCES_TASK_NAME = Pattern.compile("compile(\\d+)?Java");
+	private static final Set<String> CUSTOM_CONTRACT_ANNOTATIONS = Set.of("org.springframework.lang.Contract");
+
+	private static final Set<String> CUSTOM_CONTRACT_TEST_ANNOTATIONS = Set
+		.of("org.assertj.core.internal.annotation.Contract");
+
+	private static final Pattern COMPILE_TASK_NAME = Pattern.compile("compile(\\w*)Java");
 
 	@Override
 	public void apply(Project project) {
@@ -43,7 +59,7 @@ public class NullabilityPlugin implements Plugin<Project> {
 			.create("nullability", NullabilityPluginExtension.class);
 		project.getPlugins().apply(ErrorPronePlugin.class);
 		configureDependencies(project, nullability);
-		configureJavaCompilation(project);
+		configureJavaCompilation(project, nullability);
 	}
 
 	private void configureDependencies(Project project, NullabilityPluginExtension nullability) {
@@ -56,33 +72,77 @@ public class NullabilityPlugin implements Plugin<Project> {
 					nullability.getNullAwayVersion().map((version) -> "com.uber.nullaway:nullaway:" + version));
 	}
 
-	private void configureJavaCompilation(Project project) {
+	private void configureJavaCompilation(Project project, NullabilityPluginExtension nullability) {
 		project.getTasks().withType(JavaCompile.class).configureEach((javaCompile) -> {
-			if (compilesMainSources(javaCompile)) {
-				configureErrorProne(javaCompile);
-			}
-			else {
-				disableErrorProne(javaCompile);
-			}
+			Provider<TaskType> taskType = project.provider(() -> getTaskType(nullability, javaCompile));
+			Provider<Boolean> enabled = taskType.map((type) -> type != TaskType.DISABLED);
+			configureErrorProne(javaCompile, enabled, taskType);
+			setErrorProneEnabled(javaCompile, enabled);
 		});
 	}
 
-	private boolean compilesMainSources(JavaCompile compileTask) {
-		return COMPILE_MAIN_SOURCES_TASK_NAME.matcher(compileTask.getName()).matches();
+	private TaskType getTaskType(NullabilityPluginExtension nullability, JavaCompile compileTask) {
+		Matcher matcher = COMPILE_TASK_NAME.matcher(compileTask.getName());
+		if (!matcher.matches()) {
+			return TaskType.DISABLED;
+		}
+		String sourceSetName = TaskNameUtils.uncapitalize(TaskNameUtils.stripDigits(matcher.group(1)));
+		if (sourceSetName.isEmpty()) {
+			return TaskType.MAIN;
+		}
+		NullabilityPluginExtension.Check.SourceSet sourceSet = nullability.getCheck()
+			.getSourceSet()
+			.findByName(sourceSetName);
+		if (sourceSet == null) {
+			return TaskType.DISABLED;
+		}
+		String sourceSetType = sourceSet.getType().get();
+		return switch (sourceSetType) {
+			case "main" -> TaskType.MAIN;
+			case "test" -> TaskType.TEST;
+			default -> throw new IllegalStateException(
+					"Unknown source set type '%s'. Supported types are: 'main', 'test'".formatted(sourceSetType));
+		};
 	}
 
-	private void configureErrorProne(JavaCompile javaCompile) {
-		errorProneOptions(javaCompile, (options) -> {
-			options.getDisableAllChecks().set(true);
-			options.option("NullAway:OnlyNullMarked", "true");
-			options.option("NullAway:CustomContractAnnotations", "org.springframework.lang.Contract");
-			options.option("NullAway:JSpecifyMode", "true");
-			options.error("NullAway");
+	private void configureErrorProne(JavaCompile compileTask, Provider<Boolean> enabled, Provider<TaskType> taskType) {
+		errorProneOptions(compileTask, (options) -> {
+			options.getDisableAllChecks().set(ifEnabled(enabled, () -> true));
+			options.getCheckOptions().putAll(ifEnabled(enabled, () -> getCheckOptions(taskType.get())));
+			options.getChecks().putAll(ifEnabled(enabled, () -> Map.of("NullAway", CheckSeverity.ERROR)));
 		});
 	}
 
-	private void disableErrorProne(JavaCompile javaCompile) {
-		errorProneOptions(javaCompile, (errorProneOptions) -> errorProneOptions.getEnabled().set(false));
+	private <T> Provider<T> ifEnabled(Provider<Boolean> enabled, Supplier<T> supplier) {
+		return enabled.map((e) -> e ? supplier.get() : null);
+	}
+
+	private Map<String, String> getCheckOptions(TaskType taskType) {
+		Map<String, String> result = new HashMap<>();
+		result.put("NullAway:OnlyNullMarked", "true");
+		result.put("NullAway:CustomContractAnnotations", getCustomContractAnnotationsOption(taskType));
+		result.put("NullAway:JSpecifyMode", "true");
+		if (taskType == TaskType.TEST) {
+			result.put("NullAway:HandleTestAssertionLibraries", "true");
+		}
+		return Collections.unmodifiableMap(result);
+	}
+
+	private String getCustomContractAnnotationsOption(TaskType taskType) {
+		StringJoiner result = new StringJoiner(",");
+		for (String annotation : new TreeSet<>(CUSTOM_CONTRACT_ANNOTATIONS)) {
+			result.add(annotation);
+		}
+		if (taskType == TaskType.TEST) {
+			for (String annotation : new TreeSet<>(CUSTOM_CONTRACT_TEST_ANNOTATIONS)) {
+				result.add(annotation);
+			}
+		}
+		return result.toString();
+	}
+
+	private void setErrorProneEnabled(JavaCompile compileTask, Provider<Boolean> enabled) {
+		errorProneOptions(compileTask, (errorProneOptions) -> errorProneOptions.getEnabled().set(enabled));
 	}
 
 	private void errorProneOptions(JavaCompile compileTask, Consumer<ErrorProneOptions> optionsConsumer) {
@@ -90,6 +150,23 @@ public class NullabilityPlugin implements Plugin<Project> {
 		ErrorProneOptions errorProneOptions = ((ExtensionAware) options).getExtensions()
 			.getByType(ErrorProneOptions.class);
 		optionsConsumer.accept(errorProneOptions);
+	}
+
+	private enum TaskType {
+
+		/**
+		 * Main code.
+		 */
+		MAIN,
+		/**
+		 * Test code.
+		 */
+		TEST,
+		/**
+		 * Disabled.
+		 */
+		DISABLED
+
 	}
 
 }
