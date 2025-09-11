@@ -74,7 +74,8 @@ public class NullabilityPlugin implements Plugin<Project> {
 
 	private void configureJavaCompilation(Project project, NullabilityPluginExtension nullability) {
 		project.getTasks().withType(JavaCompile.class).configureEach((javaCompile) -> {
-			Provider<TaskType> taskType = project.provider(() -> getTaskType(nullability, javaCompile));
+			Provider<TaskType> taskType = project
+				.provider(MemoizedCallable.of(() -> getTaskType(nullability, javaCompile)));
 			Provider<Boolean> enabled = taskType.map((type) -> type != TaskType.DISABLED);
 			configureErrorProne(javaCompile, enabled, taskType);
 			setErrorProneEnabled(javaCompile, enabled);
