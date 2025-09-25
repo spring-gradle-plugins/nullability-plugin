@@ -74,9 +74,18 @@ class NullabilityPluginIntegrationTests {
 	}
 
 	@Test
-	void disablesErrorProneOnCompileTestJava() {
+	void disablesErrorProneOnCompileTestJavaByDefault() {
 		BuildResult result = this.gradleBuild.build("checkCompileTestJava");
 		assertThat(result.getOutput()).contains("-XepCompilingTestOnlyCode");
+	}
+
+	@Test
+	void configuresErrorProneOnCompileTestJavaWhenEnabled() {
+		BuildResult result = this.gradleBuild.build("checkCompileTestJava");
+		assertThat(result.getOutput()).contains(
+				"-XepDisableAllChecks -XepCompilingTestOnlyCode -Xep:NullAway:ERROR -XepOpt:NullAway:OnlyNullMarked=true "
+						+ "-XepOpt:NullAway:CustomContractAnnotations=org.springframework.lang.Contract,org.assertj.core.internal.annotation.Contract "
+						+ "-XepOpt:NullAway:JSpecifyMode=true -XepOpt:NullAway:HandleTestAssertionLibraries=true");
 	}
 
 	@Test
@@ -91,6 +100,13 @@ class NullabilityPluginIntegrationTests {
 		writeSource("test");
 		BuildResult result = this.gradleBuild.build("compileTestJava");
 		assertThat(result.task(":compileTestJava").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+	}
+
+	@Test
+	void compileFailsForNullabilityViolationInTestCodeWhenCheckingIsEnabled() throws IOException {
+		writeSource("test");
+		BuildResult result = this.gradleBuild.prepareRunner("compileTestJava").buildAndFail();
+		assertThat(result.getOutput()).contains("[NullAway] assigning @Nullable expression to @NonNull field");
 	}
 
 	private void writeSource(String sourceSetName) {

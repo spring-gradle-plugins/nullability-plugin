@@ -16,8 +16,11 @@
 
 package io.spring.gradle.nullability;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import javax.inject.Inject;
@@ -25,6 +28,7 @@ import javax.inject.Inject;
 import net.ltgt.gradle.errorprone.CheckSeverity;
 import net.ltgt.gradle.errorprone.ErrorProneOptions;
 import org.gradle.api.provider.Property;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.compile.JavaCompile;
 
 /**
@@ -41,40 +45,60 @@ public abstract class NullabilityOptions {
 	 */
 	@Inject
 	public NullabilityOptions(ErrorProneOptions errorProne) {
-		errorProne.getEnabled().set(getChecking().map((checking) -> checking != Checking.DISABLED));
-		errorProne.getDisableAllChecks().set(getChecking().map((checking) -> checking != Checking.DISABLED));
-		errorProne.getCheckOptions().putAll(getChecking().map((checking) -> {
-			Map<String, String> options = new LinkedHashMap<>();
-			if (checking == Checking.MAIN) {
-				options.put("NullAway:OnlyNullMarked", "true");
-				options.put("NullAway:CustomContractAnnotations", "org.springframework.lang.Contract");
-				options.put("NullAway:JSpecifyMode", "true");
-			}
-			return options;
-		}));
-		errorProne.getChecks().putAll(getChecking().map((checking) -> {
-			if (checking == Checking.MAIN) {
-				return Map.of("NullAway", CheckSeverity.ERROR);
-			}
+		Provider<Checking> checkingAsEnum = getChecking()
+			.map((string) -> Checking.valueOf(string.toUpperCase(Locale.ROOT)));
+		errorProne.getEnabled().set(checkingAsEnum.map((checking) -> checking != Checking.DISABLED));
+		errorProne.getDisableAllChecks().set(checkingAsEnum.map((checking) -> checking != Checking.DISABLED));
+		errorProne.getCheckOptions().putAll(checkingAsEnum.map(this::checkOptions));
+		errorProne.getChecks().putAll(checkingAsEnum.map(this::checks));
+	}
+
+	private Map<String, String> checkOptions(Checking checking) {
+		if (checking == Checking.DISABLED) {
 			return Collections.emptyMap();
-		}));
+		}
+		Map<String, String> options = new LinkedHashMap<>();
+		options.put("NullAway:OnlyNullMarked", "true");
+		List<String> customContractAnnotations = new ArrayList<>();
+		customContractAnnotations.add("org.springframework.lang.Contract");
+		if (checking == Checking.TESTS) {
+			customContractAnnotations.add("org.assertj.core.internal.annotation.Contract");
+		}
+		options.put("NullAway:CustomContractAnnotations", String.join(",", customContractAnnotations));
+		options.put("NullAway:JSpecifyMode", "true");
+		if (checking == Checking.TESTS) {
+			options.put("NullAway:HandleTestAssertionLibraries", "true");
+		}
+		return options;
+	}
+
+	private Map<String, CheckSeverity> checks(Checking checking) {
+		if (checking != Checking.DISABLED) {
+			return Map.of("NullAway", CheckSeverity.ERROR);
+		}
+		return Collections.emptyMap();
 	}
 
 	/**
 	 * Returns the type of checking to perform.
 	 * @return the type of checking
 	 */
-	public abstract Property<Checking> getChecking();
+	public abstract Property<String> getChecking();
 
 	/**
-	 * The type of checking to perform for the {@link JavaCompile} task.
+	 * The type of null checking to perform for the {@link JavaCompile} task.
 	 */
-	public enum Checking {
+	enum Checking {
 
 		/**
 		 * Main code nullability checking is performed.
 		 */
 		MAIN,
+
+		/**
+		 * Test code nullability checking is performed.
+		 */
+		TESTS,
 
 		/**
 		 * Nullability checking is disabled.

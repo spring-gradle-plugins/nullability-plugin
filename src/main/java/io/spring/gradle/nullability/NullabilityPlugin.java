@@ -64,7 +64,8 @@ public class NullabilityPlugin implements Plugin<Project> {
 				.getByType(ErrorProneOptions.class);
 			NullabilityOptions nullabilityOptions = ((ExtensionAware) javaCompile.getOptions()).getExtensions()
 				.create("nullability", NullabilityOptions.class, errorProneOptions);
-			nullabilityOptions.getChecking().set(compilesMainSources(javaCompile) ? Checking.MAIN : Checking.DISABLED);
+			nullabilityOptions.getChecking()
+				.set(compilesMainSources(javaCompile) ? Checking.MAIN.name() : Checking.DISABLED.name());
 		});
 	}
 

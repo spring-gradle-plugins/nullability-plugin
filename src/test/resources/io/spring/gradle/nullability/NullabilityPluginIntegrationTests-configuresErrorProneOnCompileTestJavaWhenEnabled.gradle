@@ -1,0 +1,26 @@
+import io.spring.gradle.nullability.NullabilityOptions.Checking
+
+plugins {
+	id "io.spring.nullability"
+	id "java"
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	compileOnly("org.jspecify:jspecify:1.0.0")
+
+	testCompileOnly("org.jspecify:jspecify:1.0.0")
+}
+
+tasks.register("checkCompileTestJava") {
+	doFirst {
+		println compileTestJava.options.extensions.errorprone
+	}
+}
+
+tasks.named("compileTestJava") {
+	options.nullability.checking = "tests"
+} 
