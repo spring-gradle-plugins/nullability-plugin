@@ -16,7 +16,6 @@
 
 package io.spring.gradle.nullability;
 
-import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 import net.ltgt.gradle.errorprone.ErrorProneOptions;
@@ -26,6 +25,8 @@ import org.gradle.api.Project;
 import org.gradle.api.plugins.ExtensionAware;
 import org.gradle.api.tasks.compile.CompileOptions;
 import org.gradle.api.tasks.compile.JavaCompile;
+
+import io.spring.gradle.nullability.NullabilityOptions.Checking;
 
 /**
  * Gradle plugin for compile-time verification of nullability.
@@ -58,38 +59,17 @@ public class NullabilityPlugin implements Plugin<Project> {
 
 	private void configureJavaCompilation(Project project) {
 		project.getTasks().withType(JavaCompile.class).configureEach((javaCompile) -> {
-			if (compilesMainSources(javaCompile)) {
-				configureErrorProne(javaCompile);
-			}
-			else {
-				disableErrorProne(javaCompile);
-			}
+			CompileOptions options = javaCompile.getOptions();
+			ErrorProneOptions errorProneOptions = ((ExtensionAware) options).getExtensions()
+				.getByType(ErrorProneOptions.class);
+			NullabilityOptions nullabilityOptions = ((ExtensionAware) javaCompile.getOptions()).getExtensions()
+				.create("nullability", NullabilityOptions.class, errorProneOptions);
+			nullabilityOptions.getChecking().set(compilesMainSources(javaCompile) ? Checking.MAIN : Checking.DISABLED);
 		});
 	}
 
 	private boolean compilesMainSources(JavaCompile compileTask) {
 		return COMPILE_MAIN_SOURCES_TASK_NAME.matcher(compileTask.getName()).matches();
-	}
-
-	private void configureErrorProne(JavaCompile javaCompile) {
-		errorProneOptions(javaCompile, (options) -> {
-			options.getDisableAllChecks().set(true);
-			options.option("NullAway:OnlyNullMarked", "true");
-			options.option("NullAway:CustomContractAnnotations", "org.springframework.lang.Contract");
-			options.option("NullAway:JSpecifyMode", "true");
-			options.error("NullAway");
-		});
-	}
-
-	private void disableErrorProne(JavaCompile javaCompile) {
-		errorProneOptions(javaCompile, (errorProneOptions) -> errorProneOptions.getEnabled().set(false));
-	}
-
-	private void errorProneOptions(JavaCompile compileTask, Consumer<ErrorProneOptions> optionsConsumer) {
-		CompileOptions options = compileTask.getOptions();
-		ErrorProneOptions errorProneOptions = ((ExtensionAware) options).getExtensions()
-			.getByType(ErrorProneOptions.class);
-		optionsConsumer.accept(errorProneOptions);
 	}
 
 }
