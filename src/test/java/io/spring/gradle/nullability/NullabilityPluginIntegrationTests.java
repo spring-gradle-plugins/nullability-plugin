@@ -67,10 +67,12 @@ class NullabilityPluginIntegrationTests {
 	@Test
 	void configuresErrorProneOnCompileJava() {
 		BuildResult result = this.gradleBuild.build("checkCompileJava");
-		assertThat(result.getOutput())
-			.contains("-XepDisableAllChecks -Xep:NullAway:ERROR -XepOpt:NullAway:OnlyNullMarked=true "
-					+ "-XepOpt:NullAway:CustomContractAnnotations=org.springframework.lang.Contract "
-					+ "-XepOpt:NullAway:JSpecifyMode=true");
+		assertThat(result.getOutput()).contains("-XepDisableAllChecks")
+			.contains("-Xep:NullAway:ERROR")
+			.contains("-Xep:RequireExplicitNullMarking:ERROR")
+			.contains("-XepOpt:NullAway:OnlyNullMarked=true")
+			.contains("-XepOpt:NullAway:CustomContractAnnotations=org.springframework.lang.Contract")
+			.contains("-XepOpt:NullAway:JSpecifyMode=true");
 	}
 
 	@Test
@@ -82,10 +84,15 @@ class NullabilityPluginIntegrationTests {
 	@Test
 	void configuresErrorProneOnCompileTestJavaWhenEnabled() {
 		BuildResult result = this.gradleBuild.build("checkCompileTestJava");
-		assertThat(result.getOutput()).contains(
-				"-XepDisableAllChecks -XepCompilingTestOnlyCode -Xep:NullAway:ERROR -XepOpt:NullAway:OnlyNullMarked=true "
-						+ "-XepOpt:NullAway:CustomContractAnnotations=org.springframework.lang.Contract,org.assertj.core.internal.annotation.Contract "
-						+ "-XepOpt:NullAway:JSpecifyMode=true -XepOpt:NullAway:HandleTestAssertionLibraries=true");
+		assertThat(result.getOutput()).contains("-XepDisableAllChecks")
+			.contains("-XepCompilingTestOnlyCode")
+			.contains("-Xep:NullAway:ERROR")
+			.contains("-Xep:RequireExplicitNullMarking:ERROR")
+			.contains("-XepOpt:NullAway:OnlyNullMarked=true")
+			.contains(
+					"-XepOpt:NullAway:CustomContractAnnotations=org.springframework.lang.Contract,org.assertj.core.internal.annotation.Contract")
+			.contains("-XepOpt:NullAway:JSpecifyMode=true")
+			.contains("-XepOpt:NullAway:HandleTestAssertionLibraries=true");
 	}
 
 	@Test
@@ -109,17 +116,48 @@ class NullabilityPluginIntegrationTests {
 		assertThat(result.getOutput()).contains("[NullAway] assigning @Nullable expression to @NonNull field");
 	}
 
-	private void writeSource(String sourceSetName) {
+	@Test
+	void compileFailsForCodeThatIsNotNullMarked() throws IOException {
+		Path pkg = createSrcDirectories("main");
+		writeExampleClass(pkg);
+		BuildResult result = this.gradleBuild.prepareRunner("compileJava").buildAndFail();
+		assertThat(result.getOutput()).contains("[RequireExplicitNullMarking]");
+	}
+
+	private Path createSrcDirectories(String sourceSetName) {
 		Path projectDir = this.gradleBuild.getProjectDir().toPath();
 		Path pkg = projectDir.resolve("src/%s/java/com/example".formatted(sourceSetName));
 		try {
 			Files.createDirectories(pkg);
+		}
+		catch (IOException ex) {
+			throw new UncheckedIOException(ex);
+		}
+		return pkg;
+	}
+
+	private void writeSource(String sourceSetName) {
+		Path pkg = createSrcDirectories(sourceSetName);
+		writePackageInfo(pkg);
+		writeExampleClass(pkg);
+	}
+
+	private void writePackageInfo(Path pkg) {
+		try {
 			Files.writeString(pkg.resolve("package-info.java"), """
 					@NullMarked
 					package com.example;
 
 					import org.jspecify.annotations.NullMarked;
 					""");
+		}
+		catch (IOException ex) {
+			throw new UncheckedIOException(ex);
+		}
+	}
+
+	private void writeExampleClass(Path pkg) {
+		try {
 			Files.writeString(pkg.resolve("Example.java"), """
 					package com.example;
 
