@@ -125,7 +125,24 @@ class NullabilityPluginIntegrationTests {
 	}
 
 	@Test
+	void compileFailsForCodeThatIsNotNullMarkedWhenDisabledOnTheExtensionAndEnabledOnTheTask() throws IOException {
+		Path pkg = createSrcDirectories("main");
+		writeExampleClass(pkg);
+		BuildResult result = this.gradleBuild.prepareRunner("compileJava").buildAndFail();
+		assertThat(result.getOutput()).contains("[RequireExplicitNullMarking]");
+	}
+
+	@Test
 	void compileSucceedsForCodeThatIsNotNullMarkedWhenRequireExplicitNullMarkingIsDisabled() throws IOException {
+		Path pkg = createSrcDirectories("main");
+		writeExampleClass(pkg);
+		BuildResult result = this.gradleBuild.prepareRunner("compileJava").build();
+		assertThat(result.task(":compileJava").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+	}
+
+	@Test
+	void compileSucceedsForCodeThatIsNotNullMarkedWhenRequireExplicitNullMarkingIsDisabledOnTheTask()
+			throws IOException {
 		Path pkg = createSrcDirectories("main");
 		writeExampleClass(pkg);
 		BuildResult result = this.gradleBuild.prepareRunner("compileJava").build();

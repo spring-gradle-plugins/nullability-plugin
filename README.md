@@ -30,6 +30,14 @@ nullability {
 }
 ```
 
+The extension can also be used to disable the `RequireExplicitNullMarking` check:
+
+```groovy
+nullability {
+	requireExplicitNullMarking = false
+}
+```
+
 ## Types of Nullability Checking
 
 The plugin supports two types of nullability checking, `main` and `tests`.
@@ -41,7 +49,7 @@ Checking using `tests` differs from `main`. It adds support for AssertJ's custom
 ## Configuring Nullability Checking
 
 The plugin adds a `nullability` extension to the `options` of all `JavaCompile` tasks.
-The extension provides a single property, `checking`, that can be used to configure the type of null checking that is performed.
+The extension provides a property, `checking`, that can be used to configure the type of null checking that is performed.
 It defaults to `main` for tasks whose name matches `compile(\\d+)?Java`.
 For all other `JavaCompile` tasks it defaults to `disabled`.
 
@@ -51,3 +59,12 @@ The following enables `tests` nullability checking for `compileTestJava`:
 tasks.named("compileTestJava") {
 	options.nullability.checking = "tests"
 }
+```
+
+The task-level `nullability` extension also provides a property, `requireExplicitNullMarking`, that can be used to disable the `RequireExplicitNullMarking` check for a specific task:
+
+```groovy
+tasks.named("compileTestJava") {
+	options.nullability.requireExplicitNullMarking = false
+}
+```

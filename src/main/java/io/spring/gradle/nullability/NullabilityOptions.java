@@ -47,12 +47,13 @@ public abstract class NullabilityOptions {
 	 */
 	@Inject
 	public NullabilityOptions(ErrorProneOptions errorProne, NullabilityPluginExtension nullability) {
+		getRequireExplicitNullMarking().convention(nullability.getRequireExplicitNullMarking());
 		Provider<Checking> checkingAsEnum = getChecking()
 			.map((string) -> Checking.valueOf(string.toUpperCase(Locale.ROOT)));
 		errorProne.getEnabled().set(checkingAsEnum.map((checking) -> checking != Checking.DISABLED));
 		errorProne.getDisableAllChecks().set(checkingAsEnum.map((checking) -> checking != Checking.DISABLED));
 		errorProne.getCheckOptions().putAll(checkingAsEnum.map(this::checkOptions));
-		errorProne.getChecks().putAll(checkingAsEnum.map((checking) -> checks(checking, nullability)));
+		errorProne.getChecks().putAll(checkingAsEnum.map(this::checks));
 	}
 
 	private Map<String, String> checkOptions(Checking checking) {
@@ -74,11 +75,11 @@ public abstract class NullabilityOptions {
 		return options;
 	}
 
-	private Map<String, CheckSeverity> checks(Checking checking, NullabilityPluginExtension nullability) {
+	private Map<String, CheckSeverity> checks(Checking checking) {
 		if (checking != Checking.DISABLED) {
 			Map<String, CheckSeverity> checks = new HashMap<>();
 			checks.put("NullAway", CheckSeverity.ERROR);
-			if (Boolean.TRUE.equals(nullability.getRequireExplicitNullMarking().get())) {
+			if (Boolean.TRUE.equals(getRequireExplicitNullMarking().get())) {
 				checks.put("RequireExplicitNullMarking", CheckSeverity.ERROR);
 			}
 			return checks;
@@ -91,6 +92,12 @@ public abstract class NullabilityOptions {
 	 * @return the type of checking
 	 */
 	public abstract Property<String> getChecking();
+
+	/**
+	 * Whether explicit null marking is required.
+	 * @return the property for whether explicit null marking is required
+	 */
+	public abstract Property<Boolean> getRequireExplicitNullMarking();
 
 	/**
 	 * The type of null checking to perform for the {@link JavaCompile} task.
