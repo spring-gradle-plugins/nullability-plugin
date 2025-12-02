@@ -18,6 +18,7 @@ package io.spring.gradle.nullability;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -41,16 +42,17 @@ public abstract class NullabilityOptions {
 	/**
 	 * Internal use only.
 	 * @param errorProne the ErrorProne options to which the nullability options are
+	 * @param nullability the nullability configuration that controls some of the options
 	 * applied
 	 */
 	@Inject
-	public NullabilityOptions(ErrorProneOptions errorProne) {
+	public NullabilityOptions(ErrorProneOptions errorProne, NullabilityPluginExtension nullability) {
 		Provider<Checking> checkingAsEnum = getChecking()
 			.map((string) -> Checking.valueOf(string.toUpperCase(Locale.ROOT)));
 		errorProne.getEnabled().set(checkingAsEnum.map((checking) -> checking != Checking.DISABLED));
 		errorProne.getDisableAllChecks().set(checkingAsEnum.map((checking) -> checking != Checking.DISABLED));
 		errorProne.getCheckOptions().putAll(checkingAsEnum.map(this::checkOptions));
-		errorProne.getChecks().putAll(checkingAsEnum.map(this::checks));
+		errorProne.getChecks().putAll(checkingAsEnum.map((checking) -> checks(checking, nullability)));
 	}
 
 	private Map<String, String> checkOptions(Checking checking) {
@@ -72,9 +74,14 @@ public abstract class NullabilityOptions {
 		return options;
 	}
 
-	private Map<String, CheckSeverity> checks(Checking checking) {
+	private Map<String, CheckSeverity> checks(Checking checking, NullabilityPluginExtension nullability) {
 		if (checking != Checking.DISABLED) {
-			return Map.of("NullAway", CheckSeverity.ERROR, "RequireExplicitNullMarking", CheckSeverity.ERROR);
+			Map<String, CheckSeverity> checks = new HashMap<>();
+			checks.put("NullAway", CheckSeverity.ERROR);
+			if (Boolean.TRUE.equals(nullability.getRequireExplicitNullMarking().get())) {
+				checks.put("RequireExplicitNullMarking", CheckSeverity.ERROR);
+			}
+			return checks;
 		}
 		return Collections.emptyMap();
 	}

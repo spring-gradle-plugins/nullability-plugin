@@ -124,6 +124,14 @@ class NullabilityPluginIntegrationTests {
 		assertThat(result.getOutput()).contains("[RequireExplicitNullMarking]");
 	}
 
+	@Test
+	void compileSucceedsForCodeThatIsNotNullMarkedWhenRequireExplicitNullMarkingIsDisabled() throws IOException {
+		Path pkg = createSrcDirectories("main");
+		writeExampleClass(pkg);
+		BuildResult result = this.gradleBuild.prepareRunner("compileJava").build();
+		assertThat(result.task(":compileJava").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+	}
+
 	private Path createSrcDirectories(String sourceSetName) {
 		Path projectDir = this.gradleBuild.getProjectDir().toPath();
 		Path pkg = projectDir.resolve("src/%s/java/com/example".formatted(sourceSetName));

@@ -44,7 +44,7 @@ public class NullabilityPlugin implements Plugin<Project> {
 			.create("nullability", NullabilityPluginExtension.class);
 		project.getPlugins().apply(ErrorPronePlugin.class);
 		configureDependencies(project, nullability);
-		configureJavaCompilation(project);
+		configureJavaCompilation(project, nullability);
 	}
 
 	private void configureDependencies(Project project, NullabilityPluginExtension nullability) {
@@ -57,13 +57,13 @@ public class NullabilityPlugin implements Plugin<Project> {
 					nullability.getNullAwayVersion().map((version) -> "com.uber.nullaway:nullaway:" + version));
 	}
 
-	private void configureJavaCompilation(Project project) {
+	private void configureJavaCompilation(Project project, NullabilityPluginExtension nullability) {
 		project.getTasks().withType(JavaCompile.class).configureEach((javaCompile) -> {
 			CompileOptions options = javaCompile.getOptions();
 			ErrorProneOptions errorProneOptions = ((ExtensionAware) options).getExtensions()
 				.getByType(ErrorProneOptions.class);
 			NullabilityOptions nullabilityOptions = ((ExtensionAware) javaCompile.getOptions()).getExtensions()
-				.create("nullability", NullabilityOptions.class, errorProneOptions);
+				.create("nullability", NullabilityOptions.class, errorProneOptions, nullability);
 			nullabilityOptions.getChecking()
 				.set(compilesMainSources(javaCompile) ? Checking.MAIN.name() : Checking.DISABLED.name());
 		});

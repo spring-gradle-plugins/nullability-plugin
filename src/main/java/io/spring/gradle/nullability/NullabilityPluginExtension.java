@@ -35,6 +35,7 @@ public abstract class NullabilityPluginExtension {
 	public NullabilityPluginExtension() {
 		getErrorProneVersion().convention(ERROR_PRONE_VERSION);
 		getNullAwayVersion().convention(NULL_AWAY_VERSION);
+		getRequireExplicitNullMarking().convention(true);
 	}
 
 	/**
@@ -48,5 +49,11 @@ public abstract class NullabilityPluginExtension {
 	 * @return the NullAway version
 	 */
 	public abstract Property<String> getNullAwayVersion();
+
+	/**
+	 * Whether explicit null marking is required.
+	 * @return the property for whether explicit null marking is required
+	 */
+	public abstract Property<Boolean> getRequireExplicitNullMarking();
 
 }
