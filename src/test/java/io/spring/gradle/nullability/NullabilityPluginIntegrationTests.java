@@ -72,6 +72,7 @@ class NullabilityPluginIntegrationTests {
 			.contains("-Xep:RequireExplicitNullMarking:ERROR")
 			.contains("-XepOpt:NullAway:OnlyNullMarked=true")
 			.contains("-XepOpt:NullAway:CustomContractAnnotations=org.springframework.lang.Contract")
+			.contains("-XepOpt:NullAway:CheckContracts=true")
 			.contains("-XepOpt:NullAway:JSpecifyMode=true");
 	}
 
@@ -91,6 +92,7 @@ class NullabilityPluginIntegrationTests {
 			.contains("-XepOpt:NullAway:OnlyNullMarked=true")
 			.contains(
 					"-XepOpt:NullAway:CustomContractAnnotations=org.springframework.lang.Contract,org.assertj.core.internal.annotation.Contract")
+			.contains("-XepOpt:NullAway:CheckContracts=true")
 			.contains("-XepOpt:NullAway:JSpecifyMode=true")
 			.contains("-XepOpt:NullAway:HandleTestAssertionLibraries=true");
 	}
@@ -149,6 +151,16 @@ class NullabilityPluginIntegrationTests {
 		assertThat(result.task(":compileJava").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
 	}
 
+	@Test
+	void compileFailsForCodeThatHasAContractViolation() throws IOException {
+		Path pkg = createSrcDirectories("main");
+		writePackageInfo(pkg);
+		writeContractViolationClass(pkg);
+		BuildResult result = this.gradleBuild.prepareRunner("compileJava").buildAndFail();
+		assertThat(result.getOutput())
+			.contains("[NullAway] Method violation has @Contract(!null -> !null), but this appears to be violated");
+	}
+
 	private Path createSrcDirectories(String sourceSetName) {
 		Path projectDir = this.gradleBuild.getProjectDir().toPath();
 		Path pkg = projectDir.resolve("src/%s/java/com/example".formatted(sourceSetName));
@@ -189,6 +201,29 @@ class NullabilityPluginIntegrationTests {
 					public class Example {
 
 						private Object field = null;
+
+					}
+					""");
+		}
+		catch (IOException ex) {
+			throw new UncheckedIOException(ex);
+		}
+	}
+
+	private void writeContractViolationClass(Path pkg) {
+		try {
+			Files.writeString(pkg.resolve("ContractViolation.java"), """
+					package com.example;
+
+					import org.jetbrains.annotations.Contract;
+					import org.jspecify.annotations.Nullable;
+
+					public class ContractViolation {
+
+						@Contract("!null -> !null")
+						public @Nullable Object violation(@Nullable Object object) {
+							return null;
+						}
 
 					}
 					""");

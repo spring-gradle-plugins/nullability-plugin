@@ -67,6 +67,7 @@ public abstract class NullabilityOptions {
 		if (checking == Checking.TESTS) {
 			customContractAnnotations.add("org.assertj.core.internal.annotation.Contract");
 		}
+		options.put("NullAway:CheckContracts", "true");
 		options.put("NullAway:CustomContractAnnotations", String.join(",", customContractAnnotations));
 		options.put("NullAway:JSpecifyMode", "true");
 		if (checking == Checking.TESTS) {
