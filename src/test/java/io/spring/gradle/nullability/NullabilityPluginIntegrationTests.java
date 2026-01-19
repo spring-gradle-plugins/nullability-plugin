@@ -72,6 +72,7 @@ class NullabilityPluginIntegrationTests {
 			.contains("-Xep:RequireExplicitNullMarking:ERROR")
 			.contains("-XepOpt:NullAway:OnlyNullMarked=true")
 			.contains("-XepOpt:NullAway:CustomContractAnnotations=org.springframework.lang.Contract")
+			.contains("-XepOpt:NullAway:CheckContracts=true")
 			.contains("-XepOpt:NullAway:JSpecifyMode=true");
 	}
 
@@ -91,6 +92,7 @@ class NullabilityPluginIntegrationTests {
 			.contains("-XepOpt:NullAway:OnlyNullMarked=true")
 			.contains(
 					"-XepOpt:NullAway:CustomContractAnnotations=org.springframework.lang.Contract,org.assertj.core.internal.annotation.Contract")
+			.contains("-XepOpt:NullAway:CheckContracts=true")
 			.contains("-XepOpt:NullAway:JSpecifyMode=true")
 			.contains("-XepOpt:NullAway:HandleTestAssertionLibraries=true");
 	}
@@ -149,6 +151,25 @@ class NullabilityPluginIntegrationTests {
 		assertThat(result.task(":compileJava").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
 	}
 
+	@Test
+	void compileFailsForCodeThatHasAContractViolation() throws IOException {
+		Path pkg = createSrcDirectories("main");
+		writePackageInfo(pkg);
+		writeContractViolationClass(pkg);
+		BuildResult result = this.gradleBuild.prepareRunner("compileJava").buildAndFail();
+		assertThat(result.getOutput())
+			.contains("[NullAway] Method violation has @Contract(!null -> !null), but this appears to be violated");
+	}
+
+	@Test
+	void compileSucceedsForCodeThatCompliesWithItsContract() throws IOException {
+		Path pkg = createSrcDirectories("main");
+		writePackageInfo(pkg);
+		writeContractComplianceClass(pkg);
+		BuildResult result = this.gradleBuild.prepareRunner("compileJava").build();
+		assertThat(result.task(":compileJava").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+	}
+
 	private Path createSrcDirectories(String sourceSetName) {
 		Path projectDir = this.gradleBuild.getProjectDir().toPath();
 		Path pkg = projectDir.resolve("src/%s/java/com/example".formatted(sourceSetName));
@@ -192,6 +213,89 @@ class NullabilityPluginIntegrationTests {
 
 					}
 					""");
+		}
+		catch (IOException ex) {
+			throw new UncheckedIOException(ex);
+		}
+	}
+
+	private void writeContractViolationClass(Path pkg) {
+		try {
+			Files.writeString(pkg.resolve("ContractViolation.java"), """
+					package com.example;
+
+					import org.jetbrains.annotations.Contract;
+					import org.jspecify.annotations.Nullable;
+
+					public class ContractViolation {
+
+						@Contract("!null -> !null")
+						public @Nullable Object violation(@Nullable Object object) {
+							return null;
+						}
+
+					}
+					""");
+		}
+		catch (IOException ex) {
+			throw new UncheckedIOException(ex);
+		}
+	}
+
+	private void writeContractComplianceClass(Path pkg) {
+		try {
+			Files.writeString(pkg.resolve("ContractCompliance.java"),
+					"""
+							package com.example;
+
+							import java.util.regex.Pattern;
+							import org.jetbrains.annotations.Contract;
+							import org.jspecify.annotations.Nullable;
+
+							public class ContractCompliance {
+
+								private static final Pattern WHITE_SPACE_PATTERN = Pattern.compile("\\s+");
+
+								@Contract("_, !null -> !null")
+								@Nullable Object compliant(Object a, @Nullable Object b) {
+									if (b != null) {
+										return b;
+									}
+									return new Object();
+								}
+
+								@Contract("!null -> !null")
+								public static @Nullable Integer compliant(@Nullable String text) {
+									if (text != null) {
+										return Integer.parseInt(text);
+									}
+									else {
+										return null;
+									}
+								}
+
+								@Contract("!null -> !null")
+								private @Nullable String removeLineBreaks(@Nullable String description) {
+									return (description != null) ? WHITE_SPACE_PATTERN.matcher(description).replaceAll(" ") : null;
+								}
+
+								@Contract("!null -> !null")
+								public static @Nullable PemContent of(@Nullable String text) {
+									return (text != null) ? new PemContent(text) : null;
+								}
+
+								public static class PemContent {
+
+									private String text;
+
+									private PemContent(String text) {
+										this.text = text;
+									}
+
+								}
+
+							}
+							""");
 		}
 		catch (IOException ex) {
 			throw new UncheckedIOException(ex);
