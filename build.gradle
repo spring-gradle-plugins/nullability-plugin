@@ -30,7 +30,7 @@ checkstyle {
 }
 
 dependencies {
-	api("net.ltgt.gradle:gradle-errorprone-plugin:4.3.0")
+	api("net.ltgt.gradle:gradle-errorprone-plugin:4.4.0")
 
 	checkstyle("io.spring.javaformat:spring-javaformat-checkstyle:$springJavaFormatVersion")
 	checkstyle("com.puppycrawl.tools:checkstyle:${checkstyle.toolVersion}")
