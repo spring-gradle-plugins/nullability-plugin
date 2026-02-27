@@ -1,6 +1,6 @@
 # Nullability Plugin
 
-A Gradle plugin for verifying a Spring project's nullability at compile time. Gradle 8.x is supported.
+A Gradle plugin for verifying a Spring project's nullability at compile time. Gradle 8.x and 9.x are supported.
 
 
 
