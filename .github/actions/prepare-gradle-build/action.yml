@@ -27,9 +27,10 @@ runs:
           ${{ inputs.java-version }}
           ${{ inputs.java-toolchain == 'true' && '25' || '' }}
     - name: Set Up Gradle
-      uses: gradle/actions/setup-gradle@8379f6a1328ee0e06e2bb424dadb7b159856a326 # v4.4.0
+      uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
       with:
         cache-read-only: false
+        cache-provider: basic
         develocity-access-key: ${{ inputs.develocity-access-key }}
     - name: Configure Gradle Properties
       shell: bash
