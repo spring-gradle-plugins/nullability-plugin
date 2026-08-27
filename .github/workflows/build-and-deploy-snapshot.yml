@@ -32,13 +32,5 @@ jobs:
           signing-passphrase: ${{ secrets.GPG_PASSPHRASE }}
           uri: 'https://repo.spring.io'
           username: ${{ secrets.ARTIFACTORY_USERNAME }}
-      - name: Send Notification
-        if: always()
-        uses: ./.github/actions/send-notification
-        with:
-          build-scan-url: ${{ steps.build-and-publish.outputs.build-scan-url }}
-          run-name: ${{ format('{0} | Linux | Java 25', github.ref_name) }}
-          status: ${{ job.status }}
-          webhook-url: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
     outputs:
       version: ${{ steps.build-and-publish.outputs.version }}

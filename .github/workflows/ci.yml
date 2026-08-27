@@ -44,11 +44,3 @@ jobs:
           java-distribution: ${{ matrix.java.distribution || 'liberica' }}
           java-toolchain: ${{ matrix.java.toolchain }}
           java-version: ${{ matrix.java.version }}
-      - name: Send Notification
-        if: always()
-        uses: ./.github/actions/send-notification
-        with:
-          build-scan-url: ${{ steps.build.outputs.build-scan-url }}
-          run-name: ${{ format('{0} | {1} | Java {2}', github.ref_name, matrix.os.name, matrix.java.version) }}
-          status: ${{ job.status }}
-          webhook-url: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
