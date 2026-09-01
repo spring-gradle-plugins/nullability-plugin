@@ -73,7 +73,21 @@ class NullabilityPluginIntegrationTests {
 			.contains("-XepOpt:NullAway:OnlyNullMarked=true")
 			.contains("-XepOpt:NullAway:CustomContractAnnotations=org.springframework.lang.Contract")
 			.contains("-XepOpt:NullAway:CheckContracts=true")
-			.contains("-XepOpt:NullAway:JSpecifyMode=true");
+			.contains("-XepOpt:NullAway:JSpecifyMode=true")
+			.contains("-XepOpt:NullAway:JSpecifyExperimental=false");
+	}
+
+	@Test
+	void jSpecifyExperimentalCanBeEnabled() {
+		BuildResult result = this.gradleBuild.build("checkCompileJava");
+		assertThat(result.getOutput()).contains("-XepDisableAllChecks")
+			.contains("-Xep:NullAway:ERROR")
+			.contains("-Xep:RequireExplicitNullMarking:ERROR")
+			.contains("-XepOpt:NullAway:OnlyNullMarked=true")
+			.contains("-XepOpt:NullAway:CustomContractAnnotations=org.springframework.lang.Contract")
+			.contains("-XepOpt:NullAway:CheckContracts=true")
+			.contains("-XepOpt:NullAway:JSpecifyMode=true")
+			.contains("-XepOpt:NullAway:JSpecifyExperimental=true");
 	}
 
 	@Test
@@ -94,6 +108,7 @@ class NullabilityPluginIntegrationTests {
 					"-XepOpt:NullAway:CustomContractAnnotations=org.springframework.lang.Contract,org.assertj.core.internal.annotation.Contract")
 			.contains("-XepOpt:NullAway:CheckContracts=true")
 			.contains("-XepOpt:NullAway:JSpecifyMode=true")
+			.contains("-XepOpt:NullAway:JSpecifyExperimental=false")
 			.contains("-XepOpt:NullAway:HandleTestAssertionLibraries=true");
 	}
 

@@ -48,6 +48,7 @@ public abstract class NullabilityOptions {
 	@Inject
 	public NullabilityOptions(ErrorProneOptions errorProne, NullabilityPluginExtension nullability) {
 		getRequireExplicitNullMarking().convention(nullability.getRequireExplicitNullMarking());
+		getJspecifyExperimental().convention(nullability.getJspecifyExperimental());
 		Provider<Checking> checkingAsEnum = getChecking()
 			.map((string) -> Checking.valueOf(string.toUpperCase(Locale.ROOT)));
 		errorProne.getEnabled().set(checkingAsEnum.map((checking) -> checking != Checking.DISABLED));
@@ -70,6 +71,7 @@ public abstract class NullabilityOptions {
 		options.put("NullAway:CheckContracts", "true");
 		options.put("NullAway:CustomContractAnnotations", String.join(",", customContractAnnotations));
 		options.put("NullAway:JSpecifyMode", "true");
+		options.put("NullAway:JSpecifyExperimental", Boolean.toString(getJspecifyExperimental().get()));
 		if (checking == Checking.TESTS) {
 			options.put("NullAway:HandleTestAssertionLibraries", "true");
 		}
@@ -99,6 +101,12 @@ public abstract class NullabilityOptions {
 	 * @return the property for whether explicit null marking is required
 	 */
 	public abstract Property<Boolean> getRequireExplicitNullMarking();
+
+	/**
+	 * Whether JSpecify Experimental mode is enabled.
+	 * @return the property for whether JSpecify Experimental mode is enabled
+	 */
+	public abstract Property<Boolean> getJspecifyExperimental();
 
 	/**
 	 * The type of null checking to perform for the {@link JavaCompile} task.

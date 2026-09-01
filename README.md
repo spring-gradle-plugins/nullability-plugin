@@ -38,6 +38,14 @@ nullability {
 }
 ```
 
+A setting is also provided to enable JSpecify experimental mode:
+
+```groovy
+nullability {
+	jspecifyExperimental = true
+}
+```
+
 ## Types of Nullability Checking
 
 The plugin supports two types of nullability checking, `main` and `tests`.
@@ -61,10 +69,12 @@ tasks.named("compileTestJava") {
 }
 ```
 
-The task-level `nullability` extension also provides a property, `requireExplicitNullMarking`, that can be used to disable the `RequireExplicitNullMarking` check for a specific task:
+The task-level `nullability` extension also provides a properties for null marking and JSpecify's experimental mode.
+Use these properties to change the configuration for a specific task:
 
 ```groovy
 tasks.named("compileTestJava") {
 	options.nullability.requireExplicitNullMarking = false
+	options.nullability.jspecifyExperimental = true
 }
 ```

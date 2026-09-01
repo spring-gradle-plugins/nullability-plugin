@@ -36,6 +36,7 @@ public abstract class NullabilityPluginExtension {
 		getErrorProneVersion().convention(ERROR_PRONE_VERSION);
 		getNullAwayVersion().convention(NULL_AWAY_VERSION);
 		getRequireExplicitNullMarking().convention(true);
+		getJspecifyExperimental().convention(false);
 	}
 
 	/**
@@ -55,5 +56,11 @@ public abstract class NullabilityPluginExtension {
 	 * @return the property for whether explicit null marking is required
 	 */
 	public abstract Property<Boolean> getRequireExplicitNullMarking();
+
+	/**
+	 * Whether JSpecify Experimental mode is enabled.
+	 * @return the property for whether JSpecify Experimental mode is enabled
+	 */
+	public abstract Property<Boolean> getJspecifyExperimental();
 
 }
