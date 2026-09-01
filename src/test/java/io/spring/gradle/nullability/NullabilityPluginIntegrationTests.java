@@ -78,7 +78,7 @@ class NullabilityPluginIntegrationTests {
 	}
 
 	@Test
-	void jSpecifyExperimentalCanBeEnabled() {
+	void jspecifyExperimentalCanBeEnabled() {
 		BuildResult result = this.gradleBuild.build("checkCompileJava");
 		assertThat(result.getOutput()).contains("-XepDisableAllChecks")
 			.contains("-Xep:NullAway:ERROR")
