@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 the original author or authors.
+ * Copyright 2025-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,6 +70,7 @@ class NullabilityPluginIntegrationTests {
 		assertThat(result.getOutput()).contains("-XepDisableAllChecks")
 			.contains("-Xep:NullAway:ERROR")
 			.contains("-Xep:RequireExplicitNullMarking:ERROR")
+			.contains("-Xep:JSpecifyUnrecognizedAnnotationLocation:WARN")
 			.contains("-XepOpt:NullAway:OnlyNullMarked=true")
 			.contains("-XepOpt:NullAway:CustomContractAnnotations=org.springframework.lang.Contract")
 			.contains("-XepOpt:NullAway:CheckContracts=true")
@@ -83,11 +84,38 @@ class NullabilityPluginIntegrationTests {
 		assertThat(result.getOutput()).contains("-XepDisableAllChecks")
 			.contains("-Xep:NullAway:ERROR")
 			.contains("-Xep:RequireExplicitNullMarking:ERROR")
+			.contains("-Xep:JSpecifyUnrecognizedAnnotationLocation:WARN")
 			.contains("-XepOpt:NullAway:OnlyNullMarked=true")
 			.contains("-XepOpt:NullAway:CustomContractAnnotations=org.springframework.lang.Contract")
 			.contains("-XepOpt:NullAway:CheckContracts=true")
 			.contains("-XepOpt:NullAway:JSpecifyMode=true")
 			.contains("-XepOpt:NullAway:JSpecifyExperimental=true");
+	}
+
+	@Test
+	void jspecifyUnrecognizedAnnotationLocationCanBeConfigured() {
+		BuildResult result = this.gradleBuild.build("checkCompileJava");
+		assertThat(result.getOutput()).contains("-XepDisableAllChecks")
+			.contains("-Xep:NullAway:ERROR")
+			.contains("-Xep:RequireExplicitNullMarking:ERROR")
+			.contains("-Xep:JSpecifyUnrecognizedAnnotationLocation:ERROR")
+			.contains("-XepOpt:NullAway:OnlyNullMarked=true")
+			.contains("-XepOpt:NullAway:CustomContractAnnotations=org.springframework.lang.Contract")
+			.contains("-XepOpt:NullAway:CheckContracts=true")
+			.contains("-XepOpt:NullAway:JSpecifyMode=true");
+	}
+
+	@Test
+	void jspecifyUnrecognizedAnnotationLocationCanBeSwitchedOff() {
+		BuildResult result = this.gradleBuild.build("checkCompileJava");
+		assertThat(result.getOutput()).contains("-XepDisableAllChecks")
+			.contains("-Xep:NullAway:ERROR")
+			.contains("-Xep:RequireExplicitNullMarking:ERROR")
+			.contains("-Xep:JSpecifyUnrecognizedAnnotationLocation:OFF")
+			.contains("-XepOpt:NullAway:OnlyNullMarked=true")
+			.contains("-XepOpt:NullAway:CustomContractAnnotations=org.springframework.lang.Contract")
+			.contains("-XepOpt:NullAway:CheckContracts=true")
+			.contains("-XepOpt:NullAway:JSpecifyMode=true");
 	}
 
 	@Test
@@ -183,6 +211,17 @@ class NullabilityPluginIntegrationTests {
 		writeContractComplianceClass(pkg);
 		BuildResult result = this.gradleBuild.prepareRunner("compileJava").build();
 		assertThat(result.task(":compileJava").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+	}
+
+	@Test
+	void compileSucceedsWithAWarningForCodeWithJSpecifyAnnotationInUnrecognizedLocation() throws IOException {
+		Path pkg = createSrcDirectories("main");
+		writePackageInfo(pkg);
+		writeUnrecognizedAnnotationLocationClass(pkg);
+		BuildResult result = this.gradleBuild.prepareRunner("compileJava").build();
+		assertThat(result.getOutput())
+			.contains("warning: [JSpecifyUnrecognizedAnnotationLocation] A nullness annotation on a primitive "
+					+ "type has no meaning under JSpecify.");
 	}
 
 	private Path createSrcDirectories(String sourceSetName) {
@@ -311,6 +350,27 @@ class NullabilityPluginIntegrationTests {
 
 							}
 							""");
+		}
+		catch (IOException ex) {
+			throw new UncheckedIOException(ex);
+		}
+	}
+
+	private void writeUnrecognizedAnnotationLocationClass(Path pkg) {
+		try {
+			Files.writeString(pkg.resolve("UnrecognizedAnnotationLocation.java"), """
+					package com.example;
+
+					import org.jspecify.annotations.Nullable;
+
+					public class UnrecognizedAnnotationLocation {
+
+						public void violation(@Nullable int value) {
+
+						}
+
+					}
+					""");
 		}
 		catch (IOException ex) {
 			throw new UncheckedIOException(ex);

@@ -38,13 +38,20 @@ nullability {
 }
 ```
 
-A setting is also provided to enable JSpecify experimental mode:
+Various JSpecify settings can also be configured:
 
 ```groovy
+import net.ltgt.gradle.errorprone.CheckSeverity
+
 nullability {
-	jspecifyExperimental = true
+	jspecify {
+		experimental = true
+		unrecognizedAnnotationLocation = CheckSeverity.ERROR
+	}
 }
 ```
+
+Note the import of the `CheckSeverity` type.
 
 ## Types of Nullability Checking
 
@@ -69,12 +76,19 @@ tasks.named("compileTestJava") {
 }
 ```
 
-The task-level `nullability` extension also provides a properties for null marking and JSpecify's experimental mode.
+The task-level `nullability` extension also provides properties for null marking and various JSpecify settings:
 Use these properties to change the configuration for a specific task:
 
 ```groovy
+import net.ltgt.gradle.errorprone.CheckSeverity
+
 tasks.named("compileTestJava") {
 	options.nullability.requireExplicitNullMarking = false
-	options.nullability.jspecifyExperimental = true
+	options.nullability.jspecify {
+		experimental = true
+		unrecognizedAnnotationLocation = CheckSeverity.ERROR
+	}
 }
 ```
+
+Note the import of the `CheckSeverity` type.

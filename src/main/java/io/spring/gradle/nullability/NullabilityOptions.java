@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 the original author or authors.
+ * Copyright 2025-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,9 +28,13 @@ import javax.inject.Inject;
 
 import net.ltgt.gradle.errorprone.CheckSeverity;
 import net.ltgt.gradle.errorprone.ErrorProneOptions;
+import org.gradle.api.Action;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.compile.JavaCompile;
+
+import io.spring.gradle.nullability.NullabilityPluginExtension.JSpecify;
 
 /**
  * Nullability configuration options for a {@link JavaCompile} task.
@@ -39,22 +43,30 @@ import org.gradle.api.tasks.compile.JavaCompile;
  */
 public abstract class NullabilityOptions {
 
+	private final JSpecifyOptions jspecify;
+
 	/**
 	 * Internal use only.
+	 * @param objects object factory to create nested instances
 	 * @param errorProne the ErrorProne options to which the nullability options are
 	 * @param nullability the nullability configuration that controls some of the options
 	 * applied
 	 */
 	@Inject
-	public NullabilityOptions(ErrorProneOptions errorProne, NullabilityPluginExtension nullability) {
+	public NullabilityOptions(ObjectFactory objects, ErrorProneOptions errorProne,
+			NullabilityPluginExtension nullability) {
+		this.jspecify = objects.newInstance(JSpecifyOptions.class, nullability.jspecify());
 		getRequireExplicitNullMarking().convention(nullability.getRequireExplicitNullMarking());
-		getJspecifyExperimental().convention(nullability.getJspecifyExperimental());
 		Provider<Checking> checkingAsEnum = getChecking()
 			.map((string) -> Checking.valueOf(string.toUpperCase(Locale.ROOT)));
 		errorProne.getEnabled().set(checkingAsEnum.map((checking) -> checking != Checking.DISABLED));
 		errorProne.getDisableAllChecks().set(checkingAsEnum.map((checking) -> checking != Checking.DISABLED));
 		errorProne.getCheckOptions().putAll(checkingAsEnum.map(this::checkOptions));
 		errorProne.getChecks().putAll(checkingAsEnum.map(this::checks));
+	}
+
+	public void jspecify(Action<JSpecifyOptions> configurer) {
+		configurer.execute(this.jspecify);
 	}
 
 	private Map<String, String> checkOptions(Checking checking) {
@@ -70,11 +82,10 @@ public abstract class NullabilityOptions {
 		}
 		options.put("NullAway:CheckContracts", "true");
 		options.put("NullAway:CustomContractAnnotations", String.join(",", customContractAnnotations));
-		options.put("NullAway:JSpecifyMode", "true");
-		options.put("NullAway:JSpecifyExperimental", Boolean.toString(getJspecifyExperimental().get()));
 		if (checking == Checking.TESTS) {
 			options.put("NullAway:HandleTestAssertionLibraries", "true");
 		}
+		this.jspecify.configureOptions(options);
 		return options;
 	}
 
@@ -85,6 +96,7 @@ public abstract class NullabilityOptions {
 			if (Boolean.TRUE.equals(getRequireExplicitNullMarking().get())) {
 				checks.put("RequireExplicitNullMarking", CheckSeverity.ERROR);
 			}
+			this.jspecify.configureChecks(checks);
 			return checks;
 		}
 		return Collections.emptyMap();
@@ -102,11 +114,36 @@ public abstract class NullabilityOptions {
 	 */
 	public abstract Property<Boolean> getRequireExplicitNullMarking();
 
-	/**
-	 * Whether JSpecify Experimental mode is enabled.
-	 * @return the property for whether JSpecify Experimental mode is enabled
-	 */
-	public abstract Property<Boolean> getJspecifyExperimental();
+	public abstract static class JSpecifyOptions {
+
+		@Inject
+		public JSpecifyOptions(JSpecify jspecify) {
+			getExperimental().convention(jspecify.getExperimental());
+			getUnrecognizedAnnotationLocation().convention(jspecify.getUnrecognizedAnnotationLocation());
+		}
+
+		/**
+		 * Whether JSpecify Experimental mode is enabled.
+		 * @return the property for whether JSpecify Experimental mode is enabled
+		 */
+		public abstract Property<Boolean> getExperimental();
+
+		/**
+		 * Severity of the JSpecify unrecognized annotation location check.
+		 * @return the property for whether JSpecify Experimental mode is enabled
+		 */
+		public abstract Property<CheckSeverity> getUnrecognizedAnnotationLocation();
+
+		void configureOptions(Map<String, String> options) {
+			options.put("NullAway:JSpecifyMode", "true");
+			options.put("NullAway:JSpecifyExperimental", Boolean.toString(getExperimental().get()));
+		}
+
+		void configureChecks(Map<String, CheckSeverity> checks) {
+			checks.put("JSpecifyUnrecognizedAnnotationLocation", getUnrecognizedAnnotationLocation().get());
+		}
+
+	}
 
 	/**
 	 * The type of null checking to perform for the {@link JavaCompile} task.
