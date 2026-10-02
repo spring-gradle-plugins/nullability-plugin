@@ -18,8 +18,6 @@ package io.spring.gradle.nullability;
 
 import javax.inject.Inject;
 
-import net.ltgt.gradle.errorprone.CheckSeverity;
-import org.gradle.api.Action;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
 
@@ -28,13 +26,11 @@ import org.gradle.api.provider.Property;
  *
  * @author Andy Wilkinson
  */
-public abstract class NullabilityPluginExtension {
+public abstract class NullabilityPluginExtension extends NullabilityOptions {
 
 	static final String ERROR_PRONE_VERSION = "2.50.0";
 
 	static final String NULL_AWAY_VERSION = "0.14.2";
-
-	private final JSpecify jspecify;
 
 	/**
 	 * Internal use only.
@@ -42,10 +38,9 @@ public abstract class NullabilityPluginExtension {
 	 */
 	@Inject
 	public NullabilityPluginExtension(ObjectFactory objects) {
+		super(objects, null);
 		getErrorProneVersion().convention(ERROR_PRONE_VERSION);
 		getNullAwayVersion().convention(NULL_AWAY_VERSION);
-		getRequireExplicitNullMarking().convention(true);
-		this.jspecify = objects.newInstance(JSpecify.class);
 	}
 
 	/**
@@ -59,40 +54,5 @@ public abstract class NullabilityPluginExtension {
 	 * @return the NullAway version
 	 */
 	public abstract Property<String> getNullAwayVersion();
-
-	/**
-	 * Whether explicit null marking is required.
-	 * @return the property for whether explicit null marking is required
-	 */
-	public abstract Property<Boolean> getRequireExplicitNullMarking();
-
-	public void jspecify(Action<JSpecify> configurer) {
-		configurer.execute(this.jspecify);
-	}
-
-	JSpecify jspecify() {
-		return this.jspecify;
-	}
-
-	public abstract static class JSpecify {
-
-		public JSpecify() {
-			getExperimental().convention(false);
-			getUnrecognizedAnnotationLocation().convention(CheckSeverity.WARN);
-		}
-
-		/**
-		 * Whether JSpecify Experimental mode is enabled.
-		 * @return the property for whether JSpecify Experimental mode is enabled
-		 */
-		public abstract Property<Boolean> getExperimental();
-
-		/**
-		 * Severity of the JSpecify unrecognized annotation location check.
-		 * @return the property for whether JSpecify Experimental mode is enabled
-		 */
-		public abstract Property<CheckSeverity> getUnrecognizedAnnotationLocation();
-
-	}
 
 }

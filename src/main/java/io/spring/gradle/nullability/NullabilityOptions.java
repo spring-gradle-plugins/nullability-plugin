@@ -23,6 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import javax.inject.Inject;
 
@@ -30,43 +31,71 @@ import net.ltgt.gradle.errorprone.CheckSeverity;
 import net.ltgt.gradle.errorprone.ErrorProneOptions;
 import org.gradle.api.Action;
 import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.plugins.ExtensionAware;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
+import org.gradle.api.tasks.compile.CompileOptions;
 import org.gradle.api.tasks.compile.JavaCompile;
 
-import io.spring.gradle.nullability.NullabilityPluginExtension.JSpecify;
-
 /**
- * Nullability configuration options for a {@link JavaCompile} task.
+ * Nullability configuration options.
  *
  * @author Andy Wilkinson
  */
 public abstract class NullabilityOptions {
+
+	private static final Pattern COMPILE_MAIN_SOURCES_TASK_NAME = Pattern.compile("compile(\\d+)?Java");
 
 	private final JSpecifyOptions jspecify;
 
 	/**
 	 * Internal use only.
 	 * @param objects object factory to create nested instances
-	 * @param errorProne the ErrorProne options to which the nullability options are
-	 * @param nullability the nullability configuration that controls some of the options
-	 * applied
+	 * @param defaults default nullability configuration to use by convention applied
 	 */
 	@Inject
-	public NullabilityOptions(ObjectFactory objects, ErrorProneOptions errorProne,
-			NullabilityPluginExtension nullability) {
-		this.jspecify = objects.newInstance(JSpecifyOptions.class, nullability.jspecify());
-		getRequireExplicitNullMarking().convention(nullability.getRequireExplicitNullMarking());
-		Provider<Checking> checkingAsEnum = getChecking()
-			.map((string) -> Checking.valueOf(string.toUpperCase(Locale.ROOT)));
-		errorProne.getEnabled().set(checkingAsEnum.map((checking) -> checking != Checking.DISABLED));
-		errorProne.getDisableAllChecks().set(checkingAsEnum.map((checking) -> checking != Checking.DISABLED));
-		errorProne.getCheckOptions().putAll(checkingAsEnum.map(this::checkOptions));
-		errorProne.getChecks().putAll(checkingAsEnum.map(this::checks));
+	public NullabilityOptions(ObjectFactory objects, NullabilityOptions defaults) {
+		this.jspecify = objects.newInstance(JSpecifyOptions.class);
+		if (defaults != null) {
+			getRequireExplicitNullMarking().convention(defaults.getRequireExplicitNullMarking());
+			this.jspecify.defaults(defaults.jspecify);
+		}
+		else {
+			getRequireExplicitNullMarking().convention(true);
+		}
 	}
 
 	public void jspecify(Action<JSpecifyOptions> configurer) {
 		configurer.execute(this.jspecify);
+	}
+
+	/**
+	 * Returns the type of checking to perform.
+	 * @return the type of checking
+	 */
+	public abstract Property<String> getChecking();
+
+	/**
+	 * Whether explicit null marking is required.
+	 * @return the property for whether explicit null marking is required
+	 */
+	public abstract Property<Boolean> getRequireExplicitNullMarking();
+
+	void apply(JavaCompile javaCompile) {
+		CompileOptions options = javaCompile.getOptions();
+		ErrorProneOptions errorProneOptions = ((ExtensionAware) options).getExtensions()
+			.getByType(ErrorProneOptions.class);
+		getChecking().set(compilesMainSources(javaCompile) ? Checking.MAIN.name() : Checking.DISABLED.name());
+		Provider<Checking> checkingAsEnum = getChecking()
+			.map((string) -> Checking.valueOf(string.toUpperCase(Locale.ROOT)));
+		errorProneOptions.getEnabled().set(checkingAsEnum.map((checking) -> checking != Checking.DISABLED));
+		errorProneOptions.getDisableAllChecks().set(checkingAsEnum.map((checking) -> checking != Checking.DISABLED));
+		errorProneOptions.getCheckOptions().putAll(checkingAsEnum.map(this::checkOptions));
+		errorProneOptions.getChecks().putAll(checkingAsEnum.map(this::checks));
+	}
+
+	private boolean compilesMainSources(JavaCompile compileTask) {
+		return COMPILE_MAIN_SOURCES_TASK_NAME.matcher(compileTask.getName()).matches();
 	}
 
 	private Map<String, String> checkOptions(Checking checking) {
@@ -102,24 +131,11 @@ public abstract class NullabilityOptions {
 		return Collections.emptyMap();
 	}
 
-	/**
-	 * Returns the type of checking to perform.
-	 * @return the type of checking
-	 */
-	public abstract Property<String> getChecking();
-
-	/**
-	 * Whether explicit null marking is required.
-	 * @return the property for whether explicit null marking is required
-	 */
-	public abstract Property<Boolean> getRequireExplicitNullMarking();
-
 	public abstract static class JSpecifyOptions {
 
-		@Inject
-		public JSpecifyOptions(JSpecify jspecify) {
-			getExperimental().convention(jspecify.getExperimental());
-			getUnrecognizedAnnotationLocation().convention(jspecify.getUnrecognizedAnnotationLocation());
+		public JSpecifyOptions() {
+			getExperimental().convention(false);
+			getUnrecognizedAnnotationLocation().convention(CheckSeverity.WARN);
 		}
 
 		/**
@@ -130,9 +146,15 @@ public abstract class NullabilityOptions {
 
 		/**
 		 * Severity of the JSpecify unrecognized annotation location check.
-		 * @return the property for whether JSpecify Experimental mode is enabled
+		 * @return the property for the severity of the unrecognized annotation location
+		 * check
 		 */
 		public abstract Property<CheckSeverity> getUnrecognizedAnnotationLocation();
+
+		private void defaults(JSpecifyOptions defaults) {
+			getExperimental().convention(defaults.getExperimental());
+			getUnrecognizedAnnotationLocation().convention(defaults.getUnrecognizedAnnotationLocation());
+		}
 
 		void configureOptions(Map<String, String> options) {
 			options.put("NullAway:JSpecifyMode", "true");

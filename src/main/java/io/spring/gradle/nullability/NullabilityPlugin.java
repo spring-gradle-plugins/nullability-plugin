@@ -16,17 +16,11 @@
 
 package io.spring.gradle.nullability;
 
-import java.util.regex.Pattern;
-
-import net.ltgt.gradle.errorprone.ErrorProneOptions;
 import net.ltgt.gradle.errorprone.ErrorPronePlugin;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.plugins.ExtensionAware;
-import org.gradle.api.tasks.compile.CompileOptions;
 import org.gradle.api.tasks.compile.JavaCompile;
-
-import io.spring.gradle.nullability.NullabilityOptions.Checking;
 
 /**
  * Gradle plugin for compile-time verification of nullability.
@@ -35,8 +29,6 @@ import io.spring.gradle.nullability.NullabilityOptions.Checking;
  * @author Andy Wilkinson
  */
 public class NullabilityPlugin implements Plugin<Project> {
-
-	private static final Pattern COMPILE_MAIN_SOURCES_TASK_NAME = Pattern.compile("compile(\\d+)?Java");
 
 	@Override
 	public void apply(Project project) {
@@ -59,18 +51,10 @@ public class NullabilityPlugin implements Plugin<Project> {
 
 	private void configureJavaCompilation(Project project, NullabilityPluginExtension nullability) {
 		project.getTasks().withType(JavaCompile.class).configureEach((javaCompile) -> {
-			CompileOptions options = javaCompile.getOptions();
-			ErrorProneOptions errorProneOptions = ((ExtensionAware) options).getExtensions()
-				.getByType(ErrorProneOptions.class);
 			NullabilityOptions nullabilityOptions = ((ExtensionAware) javaCompile.getOptions()).getExtensions()
-				.create("nullability", NullabilityOptions.class, errorProneOptions, nullability);
-			nullabilityOptions.getChecking()
-				.set(compilesMainSources(javaCompile) ? Checking.MAIN.name() : Checking.DISABLED.name());
+				.create("nullability", NullabilityOptions.class, nullability);
+			nullabilityOptions.apply(javaCompile);
 		});
-	}
-
-	private boolean compilesMainSources(JavaCompile compileTask) {
-		return COMPILE_MAIN_SOURCES_TASK_NAME.matcher(compileTask.getName()).matches();
 	}
 
 }
