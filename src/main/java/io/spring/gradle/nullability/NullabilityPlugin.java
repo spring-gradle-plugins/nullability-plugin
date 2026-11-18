@@ -30,6 +30,13 @@ import org.gradle.api.tasks.compile.JavaCompile;
  */
 public class NullabilityPlugin implements Plugin<Project> {
 
+	/**
+	 * Internal use only.
+	 */
+	public NullabilityPlugin() {
+
+	}
+
 	@Override
 	public void apply(Project project) {
 		NullabilityPluginExtension nullability = project.getExtensions()

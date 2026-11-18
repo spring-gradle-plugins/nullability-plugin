@@ -65,6 +65,10 @@ public abstract class NullabilityOptions {
 		}
 	}
 
+	/**
+	 * Calls the given {@code configurer} of the {@link JSpecifyOptions}.
+	 * @param configurer called to configure the JSpecify options
+	 */
 	public void jspecify(Action<JSpecifyOptions> configurer) {
 		configurer.execute(this.jspecify);
 	}
@@ -131,8 +135,14 @@ public abstract class NullabilityOptions {
 		return Collections.emptyMap();
 	}
 
+	/**
+	 * JSpecify configuration options.
+	 */
 	public abstract static class JSpecifyOptions {
 
+		/**
+		 * Internal use only.
+		 */
 		public JSpecifyOptions() {
 			getExperimental().convention(false);
 			getUnrecognizedAnnotationLocation().convention(CheckSeverity.WARN);

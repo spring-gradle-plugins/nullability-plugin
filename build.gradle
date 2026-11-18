@@ -53,6 +53,10 @@ test {
 	useJUnitPlatform()
 }
 
+tasks.withType(Javadoc).configureEach {
+	options.addBooleanOption("Werror", true)
+}
+
 publishing {
 	publications.withType(MavenPublication) {
 		pom {
