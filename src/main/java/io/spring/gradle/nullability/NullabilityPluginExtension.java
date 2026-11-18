@@ -30,7 +30,7 @@ public abstract class NullabilityPluginExtension extends NullabilityOptions {
 
 	static final String ERROR_PRONE_VERSION = "2.52.0";
 
-	static final String NULL_AWAY_VERSION = "0.14.3";
+	static final String NULL_AWAY_VERSION = "0.14.4";
 
 	/**
 	 * Internal use only.
