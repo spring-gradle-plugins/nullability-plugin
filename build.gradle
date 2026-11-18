@@ -49,7 +49,7 @@ java {
 	withSourcesJar()
 }
 
-test {
+tasks.named("test") {
 	useJUnitPlatform()
 }
 
